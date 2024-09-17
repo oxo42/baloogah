@@ -129,3 +129,11 @@ pub async fn download_images(client: Arc<Docker>, images: &[&str]) -> Vec<String
     downloaded_images.sort();
     downloaded_images
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_pass() {
+        println!("whoop");
+    }
+}
