@@ -69,6 +69,7 @@ async fn run_app(
 ) -> anyhow::Result<()> {
     loop {
         terminal.draw(|f| tui::ui(f, app))?;
+        app.tick();
 
         let finished = app.completed_images >= app.total_images;
 
@@ -78,7 +79,7 @@ async fn run_app(
         }
 
         // Wait for a terminal event
-        if crossterm::event::poll(Duration::from_millis(50))? {
+        if crossterm::event::poll(Duration::from_millis(20))? {
             if let Event::Key(key) = event::read()? {
                 if finished {
                     // Any key to exit when finished

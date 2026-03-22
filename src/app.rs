@@ -7,6 +7,7 @@ pub struct App {
     pub image_order: Vec<String>,
     pub image_progress: HashMap<String, f32>,
     pub errors: Vec<String>,
+    pub tick: u64,
 }
 
 impl App {
@@ -25,7 +26,12 @@ impl App {
             image_order,
             image_progress,
             errors: Vec::new(),
+            tick: 0,
         }
+    }
+
+    pub fn tick(&mut self) {
+        self.tick = self.tick.wrapping_add(1);
     }
 
     pub fn handle_status(&mut self, status: Status) {
