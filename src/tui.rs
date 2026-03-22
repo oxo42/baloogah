@@ -72,6 +72,8 @@ pub fn ui(f: &mut Frame, app: &App) {
         let display_name = truncate_name(short_name, name_max_width);
         
         let progress = app.image_progress.get(img).copied().unwrap_or(0.0);
+        let has_error = app.image_errors.get(img).map(|e| !e.is_empty()).unwrap_or(false);
+        
         let inner_bar_len = bar_width.saturating_sub(2); // [] borders
         let filled = (progress * inner_bar_len as f32).round() as usize;
         let filled = filled.min(inner_bar_len);
@@ -87,8 +89,16 @@ pub fn ui(f: &mut Frame, app: &App) {
             spinner_char,
             name_width = name_max_width
         );
+
+        let style = if has_error {
+            Style::default().fg(Color::Red)
+        } else if progress >= 1.0 {
+            Style::default().fg(Color::Green)
+        } else {
+            Style::default().fg(Color::White)
+        };
         
-        list_items.push(Line::from(line_str));
+        list_items.push(Line::from(line_str).style(style));
     }
 
     let list_block = Paragraph::new(list_items)
