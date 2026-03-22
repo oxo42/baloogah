@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
@@ -18,7 +18,7 @@ fn truncate_name(name: &str, max_len: usize) -> String {
     if name.len() <= max_len {
         return name.to_string();
     }
-    let side_len = (max_len - 3) / 2;
+    let side_len = (max_len.saturating_sub(3)) / 2;
     let start = &name[..side_len];
     let end = &name[name.len() - side_len..];
     format!("{}...{}", start, end)
@@ -60,7 +60,6 @@ pub fn ui(f: &mut Frame, app: &App) {
     };
 
     // Calculate dynamic bar width
-    // max 30, but let's say it takes up to 30% of the screen but at least 10 and at most 30
     let bar_width = (available_width / 3).clamp(10, 30);
     
     // Remaining width for the name: available_width - bar_width - spacing - spinner
@@ -74,22 +73,6 @@ pub fn ui(f: &mut Frame, app: &App) {
         let progress = app.image_progress.get(img).copied().unwrap_or(0.0);
         let has_error = app.image_errors.get(img).map(|e| !e.is_empty()).unwrap_or(false);
         
-        let inner_bar_len = bar_width.saturating_sub(2); // [] borders
-        let filled = (progress * inner_bar_len as f32).round() as usize;
-        let filled = filled.min(inner_bar_len);
-        let empty = inner_bar_len - filled;
-
-        let bar = format!("[{}{}]", "X".repeat(filled), ".".repeat(empty));
-        
-        // Final line format: Name <flexible space> [Progress] Spinner
-        let line_str = format!(
-            "{:<name_width$} {} {}",
-            display_name,
-            bar,
-            spinner_char,
-            name_width = name_max_width
-        );
-
         let style = if has_error {
             Style::default().fg(Color::Red)
         } else if progress >= 1.0 {
@@ -97,8 +80,45 @@ pub fn ui(f: &mut Frame, app: &App) {
         } else {
             Style::default().fg(Color::White)
         };
+
+        let mut spans = Vec::new();
+
+        // Name
+        let name_str = format!("{:<name_max_width$} ", display_name);
+        spans.push(Span::styled(name_str, style));
+
+        // Bar start
+        spans.push(Span::styled("[", style));
+
+        let inner_bar_len = bar_width.saturating_sub(2); // [] borders
+        let filled = (progress * inner_bar_len as f32).round() as usize;
+        let filled = filled.min(inner_bar_len);
+
+        for i in 0..inner_bar_len {
+            if i < filled {
+                if has_error {
+                    spans.push(Span::styled("█", Style::default().fg(Color::Red)));
+                } else if progress >= 1.0 {
+                    spans.push(Span::styled("█", Style::default().fg(Color::Green)));
+                } else {
+                    // Gradient: Blue (0, 0, 255) to Cyan (0, 255, 255)
+                    let ratio = i as f32 / inner_bar_len.saturating_sub(1).max(1) as f32;
+                    let g = (ratio * 255.0) as u8;
+                    let color = Color::Rgb(0, g, 255);
+                    spans.push(Span::styled("█", Style::default().fg(color)));
+                }
+            } else {
+                spans.push(Span::styled("░", Style::default().fg(Color::DarkGray)));
+            }
+        }
+
+        // Bar end
+        spans.push(Span::styled("] ", style));
         
-        list_items.push(Line::from(line_str).style(style));
+        // Spinner
+        spans.push(Span::styled(spinner_char, style));
+        
+        list_items.push(Line::from(spans));
     }
 
     let list_block = Paragraph::new(list_items)
