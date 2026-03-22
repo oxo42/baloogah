@@ -15,8 +15,11 @@
 - `src/main.rs`: Entry point that orchestrates the workflow:
     1. Connects to the Docker daemon.
     2. Identifies running containers and their images.
-    3. Initiates concurrent pulls for these images.
-- `src/docker.rs`: Contains the logic for interacting with the Docker API, including image listing and pulling status tracking.
+    3. Initializes the TUI and background pull tasks.
+    4. Manages the main event loop (UI rendering and channel processing).
+- `src/docker.rs`: Logic for interacting with the Docker API, image listing, and piping pull updates over an `mpsc` channel.
+- `src/app.rs`: Application state management, tracking overall progress, individual image statuses, and errors.
+- `src/tui.rs`: UI rendering logic using `ratatui`, defining the layout and widgets for the progress display and error pane.
 
 ## Building and Running
 
@@ -45,5 +48,9 @@
 
 ### Project Structure
 - `src/`: Contains all source code.
+    - `main.rs`: Main entry point.
+    - `docker.rs`: Docker Engine API integration.
+    - `app.rs`: TUI state management.
+    - `tui.rs`: TUI rendering logic.
 - `Cargo.toml`: Project manifest and dependency definitions.
 - `Cross.toml`: Configuration for cross-compilation with `cross`.
