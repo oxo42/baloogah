@@ -6,23 +6,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::App;
+use crate::app::{App, shorten_name, truncate_name};
 
 const SPINNER_CHARS: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-fn shorten_name(name: &str) -> &str {
-    name.split('/').last().unwrap_or(name)
-}
-
-fn truncate_name(name: &str, max_len: usize) -> String {
-    if name.len() <= max_len {
-        return name.to_string();
-    }
-    let side_len = (max_len.saturating_sub(3)) / 2;
-    let start = &name[..side_len];
-    let end = &name[name.len() - side_len..];
-    format!("{}...{}", start, end)
-}
 
 pub fn ui(f: &mut Frame, app: &App) {
     let finished = app.completed_images >= app.total_images;
