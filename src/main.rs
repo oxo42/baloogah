@@ -1,9 +1,8 @@
 use crossterm::{
     event::{self, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{backend::CrosstermBackend, Terminal, TerminalOptions, Viewport};
 use std::{io, sync::Arc, time::Duration};
 
 use crate::app::App;
@@ -29,12 +28,22 @@ async fn main() -> anyhow::Result<()> {
 
     let mut app = App::new(&images_strs);
 
-    // Setup terminal
+    // Calculate needed height:
+    // 3 for header
+    // images_strs.len() + 2 for the list with borders
+    // 5 for errors (if any) - let's assume worst case for now or just images.len() + 5
+    let height = (images_strs.len() + 3 + 2 + 5) as u16;
+
+    // Setup terminal with inline viewport
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::with_options(
+        backend,
+        TerminalOptions {
+            viewport: Viewport::Inline(height),
+        },
+    )?;
 
     // Start background downloads
     let (mut rx, join_handles) = download_images(Arc::clone(&client), &images_strs);
@@ -44,10 +53,6 @@ async fn main() -> anyhow::Result<()> {
 
     // Restore terminal
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-    )?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -59,6 +64,8 @@ async fn main() -> anyhow::Result<()> {
         let _ = handle.await;
     }
 
+    println!();
+
     Ok(())
 }
 
@@ -69,9 +76,15 @@ async fn run_app(
 ) -> anyhow::Result<()> {
     loop {
         terminal.draw(|f| tui::ui(f, app))?;
-        app.tick();
 
-        let finished = app.completed_images >= app.total_images;
+        if app.completed_images >= app.total_images {
+            // Give a small moment to see the 100% state before returning
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            terminal.draw(|f| tui::ui(f, app))?;
+            return Ok(());
+        }
+
+        app.tick();
 
         // Process any pending status updates
         while let Ok(status) = rx.try_recv() {
@@ -81,11 +94,7 @@ async fn run_app(
         // Wait for a terminal event
         if crossterm::event::poll(Duration::from_millis(20))? {
             if let Event::Key(key) = event::read()? {
-                if finished {
-                    // Any key to exit when finished
-                    return Ok(());
-                } else if let KeyCode::Char('q') = key.code {
-                    // Only 'q' to quit during processing
+                if let KeyCode::Char('q') = key.code {
                     return Ok(());
                 }
             }

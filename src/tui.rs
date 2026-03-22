@@ -31,9 +31,6 @@ pub fn ui(f: &mut Frame, app: &App) {
     if !app.errors.is_empty() {
         constraints.push(Constraint::Length(5));
     }
-    if finished {
-        constraints.push(Constraint::Length(1));
-    }
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -126,7 +123,7 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     f.render_widget(list_block, chunks[1]);
 
-    let mut next_chunk = 2;
+    let next_chunk = 2;
     if !app.errors.is_empty() {
         let error_items: Vec<Line> = app
             .errors
@@ -137,11 +134,5 @@ pub fn ui(f: &mut Frame, app: &App) {
             .style(Style::default().fg(Color::Red))
             .block(Block::default().title("Errors").borders(Borders::ALL));
         f.render_widget(error_block, chunks[next_chunk]);
-        next_chunk += 1;
-    }
-
-    if finished {
-        let footer = Paragraph::new("Press any key to exit").style(Style::default().fg(Color::Yellow));
-        f.render_widget(footer, chunks[next_chunk]);
     }
 }
