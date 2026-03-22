@@ -9,15 +9,15 @@ use ratatui::{
 use crate::app::App;
 
 pub fn ui(f: &mut Frame, app: &App) {
-    let constraints = if app.errors.is_empty() {
-        vec![Constraint::Length(3), Constraint::Min(0)]
-    } else {
-        vec![
-            Constraint::Length(3),
-            Constraint::Min(5),
-            Constraint::Length(5),
-        ]
-    };
+    let finished = app.completed_images >= app.total_images;
+    
+    let mut constraints = vec![Constraint::Length(3), Constraint::Min(0)];
+    if !app.errors.is_empty() {
+        constraints.push(Constraint::Length(5));
+    }
+    if finished {
+        constraints.push(Constraint::Length(1));
+    }
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -49,6 +49,7 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     f.render_widget(list_block, chunks[1]);
 
+    let mut next_chunk = 2;
     if !app.errors.is_empty() {
         let error_items: Vec<Line> = app
             .errors
@@ -58,6 +59,12 @@ pub fn ui(f: &mut Frame, app: &App) {
         let error_block = Paragraph::new(error_items)
             .style(Style::default().fg(Color::Red))
             .block(Block::default().title("Errors").borders(Borders::ALL));
-        f.render_widget(error_block, chunks[2]);
+        f.render_widget(error_block, chunks[next_chunk]);
+        next_chunk += 1;
+    }
+
+    if finished {
+        let footer = Paragraph::new("Press any key to exit").style(Style::default().fg(Color::Yellow));
+        f.render_widget(footer, chunks[next_chunk]);
     }
 }

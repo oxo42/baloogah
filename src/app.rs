@@ -7,7 +7,6 @@ pub struct App {
     pub image_order: Vec<String>,
     pub image_progress: HashMap<String, f32>,
     pub errors: Vec<String>,
-    pub quit: bool,
 }
 
 impl App {
@@ -26,7 +25,6 @@ impl App {
             image_order,
             image_progress,
             errors: Vec::new(),
-            quit: false,
         }
     }
 

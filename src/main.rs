@@ -54,8 +54,7 @@ async fn main() -> anyhow::Result<()> {
         println!("{:?}", err)
     }
 
-    // Wait for the handles to actually finish if we didn't exit early,
-    // though if we exit via 'q' we might want to just let them drop or abort.
+    // Wait for the handles to actually finish
     for handle in join_handles {
         let _ = handle.await;
     }
@@ -71,32 +70,24 @@ async fn run_app(
     loop {
         terminal.draw(|f| tui::ui(f, app))?;
 
-        // Wait for up to 50ms for a terminal event
-        if crossterm::event::poll(Duration::from_millis(50))? {
-            if let Event::Key(key) = event::read()? {
-                if let KeyCode::Char('q') = key.code {
-                    app.quit = true;
-                }
-            }
-        }
+        let finished = app.completed_images >= app.total_images;
 
-        if app.quit {
-            return Ok(());
-        }
-
-        // Process all pending status updates
+        // Process any pending status updates
         while let Ok(status) = rx.try_recv() {
             app.handle_status(status);
         }
 
-        // If all downloads are complete, we could auto-exit, but let's just 
-        // stay open until 'q' is pressed, or maybe exit automatically?
-        // Let's auto-exit when all are done for convenience.
-        if app.completed_images >= app.total_images {
-            // Draw one last time to show 100% completion
-            terminal.draw(|f| tui::ui(f, app))?;
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            return Ok(());
+        // Wait for a terminal event
+        if crossterm::event::poll(Duration::from_millis(50))? {
+            if let Event::Key(key) = event::read()? {
+                if finished {
+                    // Any key to exit when finished
+                    return Ok(());
+                } else if let KeyCode::Char('q') = key.code {
+                    // Only 'q' to quit during processing
+                    return Ok(());
+                }
+            }
         }
     }
 }
